@@ -6,7 +6,7 @@
 
 [![FiveM](https://img.shields.io/badge/platform-FiveM-red?logo=gtav&logoColor=white)](https://fivem.net)
 [![Standalone](https://img.shields.io/badge/framework-standalone-2e7d32)](https://github.com/TEARLESSVVOID/FiveM-velvet_keys)
-[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/TEARLESSVVOID/FiveM-velvet_keys/releases)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com/TEARLESSVVOID/FiveM-velvet_keys/releases)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](./LICENSE)
 
 **Give your keyboard players the smooth, progressive driving feel of a controller —
