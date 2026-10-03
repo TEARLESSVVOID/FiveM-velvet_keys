@@ -35,5 +35,14 @@ Config.ThrottleAttackMs     = 250  -- 按住 W：时间渐变到 100% 的毫秒�
 Config.ThrottleMinPower     = 0.35 -- 起步瞬间动力倍率（0~1）/ initial power multiplier
 Config.ThrottleFullPowerKmh = 30   -- 车速达到此值(km/h)时速度限制解除 / speed cap fully released here
 
+-- ===== 倒车 / Reverse =====
+-- 双保险：动力渐变（力矩）+ 倒车起步限速器（收敛到平方缓动曲线，效果直观）
+-- dual guard: power ramp (torque) + launch speed limiter (quadratic ease-in curve)
+Config.ReverseAttackMs     = 700  -- 按住 S：时间渐变到 100% 的毫秒数 / time ramp while held
+Config.ReverseMinPower     = 0.25 -- 倒车起步瞬间动力倍率（0~1）/ initial reverse power multiplier
+Config.ReverseFullPowerKmh = 30   -- 倒车速度达到此值(km/h)时动力限制解除 / torque cap released here
+Config.ReverseLaunchMaxKmh = 70   -- 限速器上限（应高于原厂倒车极速，渐变完成后不再介入）/ limiter ceiling, above any stock reverse top speed
+Config.ReverseLimitEase    = 0.15 -- 限速器每帧收敛比例（越小越柔）/ per-frame convergence factor (lower = smoother)
+
 -- 调试日志（输出到 F8 控制台）/ debug prints to the F8 console
 Config.Debug = false

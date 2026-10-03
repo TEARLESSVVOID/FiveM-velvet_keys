@@ -19,7 +19,8 @@
 
 local DBG = Config.Debug
 
-local throttleSm = 0.0 -- 当前油门时间渐变值 / current throttle time-ramp value
+local throttleSm = 0.0 -- 当前前进油门时间渐变值 / current throttle time-ramp value
+local reverseSm  = 0.0 -- 当前倒车动力时间渐变值 / current reverse time-ramp value
 local lastVeh    = 0   -- 上一帧车辆 / last vehicle handle (for resets)
 
 local function Dbg(msg)
@@ -76,6 +77,12 @@ local function ThrottleSpeedCap(veh)
     return Clamp(kmh / Config.ThrottleFullPowerKmh, Config.ThrottleMinPower, 1.0)
 end
 
+-- 按车速求倒车动力上限 / reverse power cap by speed (anti-jerk)
+local function ReverseSpeedCap(veh)
+    local kmh = GetEntitySpeed(veh) * 3.6
+    return Clamp(kmh / Config.ReverseFullPowerKmh, Config.ReverseMinPower, 1.0)
+end
+
 CreateThread(function()
     while true do
         local ped = PlayerPedId()
@@ -91,14 +98,31 @@ CreateThread(function()
                 SetVehicleSteeringScale(veh, SteerScaleBySpeed(veh))
             end
 
-            -- ===== 油门 / Throttle =====
-            -- W 保持原生输入，只平滑"动力倍率" / keep native W input, smooth power only
-            if IsControlPressed(0, 71) then -- INPUT_VEH_ACCELERATE (W)
+            -- ===== 油门与倒车 / Throttle & Reverse =====
+            -- W/S 保持原生输入，只平滑"动力倍率" / keep native W/S input, smooth power only
+            if IsControlPressed(0, 71) then -- 前进 W / INPUT_VEH_ACCELERATE
                 throttleSm = Ramp(throttleSm, 1.0, Config.ThrottleAttackMs)
+                reverseSm  = 0.0
                 SetVehicleCheatPowerIncrease(veh, throttleSm * ThrottleSpeedCap(veh))
+            elseif IsControlPressed(0, 72) then -- 刹车/倒车 S / INPUT_VEH_BRAKE
+                reverseSm  = Ramp(reverseSm, 1.0, Config.ReverseAttackMs)
+                throttleSm = 0.0
+                SetVehicleCheatPowerIncrease(veh, reverseSm * ReverseSpeedCap(veh))
+                -- 倒车起步限速器：把倒车速度收敛到平方缓动曲线上（倒车扭矩小、
+                -- 力矩法感知弱，速度收敛是最直观有效的方案）
+                -- reverse launch limiter: ease backward speed onto a quadratic
+                -- curve (reverse torque is weak, speed shaping is far more perceivable)
+                local maxMs     = Config.ReverseLaunchMaxKmh / 3.6
+                local allowedMs = reverseSm * reverseSm * maxMs -- 平方缓动 / quadratic ease-in
+                local fwdMs     = GetEntitySpeedVector(veh, true).y -- 负值=倒车 / negative = reversing
+                if fwdMs < -allowedMs - 0.2 then -- 倒车过快则柔性拉回 / ease back if reversing too fast
+                    local eased = fwdMs + (-allowedMs - fwdMs) * Config.ReverseLimitEase
+                    SetVehicleForwardSpeed(veh, eased)
+                end
             else
                 throttleSm = Config.ThrottleMinPower -- 预置下次起步起点 / pre-arm for next launch
-                SetVehicleCheatPowerIncrease(veh, 1.0) -- 无油门时恢复原生（倒车不受影响）/ restore native (reverse unaffected)
+                reverseSm  = Config.ReverseMinPower  -- 预置下次倒车起点 / pre-arm for next reverse
+                SetVehicleCheatPowerIncrease(veh, 1.0) -- 无输入时恢复原生 / restore native when idle
             end
 
             lastVeh = veh
@@ -110,6 +134,7 @@ CreateThread(function()
                 lastVeh = 0
             end
             throttleSm = 0.0
+            reverseSm  = 0.0
             Wait(150) -- 空闲低频轮询 / low-frequency idle polling
         end
     end
